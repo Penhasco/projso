@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
+#include <string.h>
 
 #include "eventlist.h"
 
@@ -101,6 +103,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
     event->data[i] = 0;
   }
 
+
   if (append_to_list(event_list, event) != 0) {
     fprintf(stderr, "Error appending event to list\n");
     free(event->data);
@@ -156,11 +159,16 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys)
   return 0;
 }
 
-int ems_show(unsigned int event_id) {
+int ems_show(unsigned int event_id, int fdOut) {
+
+  char buffer[128];
+  
+
   if (event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
   }
+
 
   struct Event* event = get_event_with_delay(event_id);
 
@@ -168,38 +176,46 @@ int ems_show(unsigned int event_id) {
     fprintf(stderr, "Event not found\n");
     return 1;
   }
-
+//PRINT P WRITE
   for (size_t i = 1; i <= event->rows; i++) {
     for (size_t j = 1; j <= event->cols; j++) {
       unsigned int* seat = get_seat_with_delay(event, seat_index(event, i, j));
-      printf("%u", *seat);
+      
+      sprintf(buffer, "%u", *seat);
+      write(fdOut, buffer, strlen(buffer));
 
       if (j < event->cols) {
-        printf(" ");
+        write(fdOut, " ", 1);
       }
     }
 
-    printf("\n");
+    write(fdOut, "\n", 1);
   }
 
   return 0;
 }
 
-int ems_list_events() {
+int ems_list_events(int fdOut) {
+
+  char buffer[128];
+
   if (event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
   }
-
+//PASSAR P WRITE
   if (event_list->head == NULL) {
-    printf("No events\n");
+    write(fdOut, "No events\n", 11);
     return 0;
   }
-
+//PRINTFS P WRITES
   struct ListNode* current = event_list->head;
   while (current != NULL) {
-    printf("Event: ");
-    printf("%u\n", (current->event)->id);
+    write(fdOut, "Event: ", 7);
+
+    sprintf(buffer,"%u\n", (current->event)->id);
+
+    write(fdOut, buffer, strlen(buffer));
     current = current->next;
   }
 
